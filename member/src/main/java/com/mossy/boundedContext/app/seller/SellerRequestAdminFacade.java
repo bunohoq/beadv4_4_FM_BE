@@ -15,10 +15,12 @@ import com.mossy.boundedContext.out.repository.seller.SellerRequestRepository;
 import com.mossy.boundedContext.out.repository.user.RoleRepository;
 import com.mossy.boundedContext.out.repository.user.UserRepository;
 import com.mossy.global.eventPublisher.EventPublisher;
-import com.mossy.kafka.publisher.KafkaEventPublisher;
+import com.mossy.kafka.KafkaTopics;
+import com.mossy.kafka.outbox.service.OutboxPublisher;
 import com.mossy.shared.member.domain.enums.SellerRequestStatus;
 import com.mossy.shared.member.domain.role.Role;
 import com.mossy.shared.member.domain.role.RoleCode;
+import com.mossy.shared.member.event.SellerJoinedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +37,7 @@ public class SellerRequestAdminFacade {
     private final SellerMapper sellerMapper;
     private final SellerRequestMapper sellerRequestMapper;
     private final RoleRepository roleRepository;
-    private final KafkaEventPublisher kafkaEventPublisher;
+    private final OutboxPublisher outboxPublisher;
     private final UserRepository userRepository;
 
     @Transactional
@@ -75,7 +77,13 @@ public class SellerRequestAdminFacade {
         }
 
         // SellerJoinedEvent 발행
-        kafkaEventPublisher.publish(sellerMapper.toSellerJoinedEvent(seller));
+        outboxPublisher.saveEvent(
+            KafkaTopics.SELLER_JOINED,
+            "Seller",
+            seller.getId(),
+            SellerJoinedEvent.class.getSimpleName(),
+            sellerMapper.toSellerJoinedEvent(seller)
+        );
 
         return new SellerAppoveResult(seller.getId(), userId);
     }
