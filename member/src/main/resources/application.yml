@@ -57,3 +57,13 @@ cloud:
 mossy:
   feign:
     auth-url: http://localhost:8086
+
+outbox:
+  poller:
+    batch-size: 100
+    max-retry: 5
+    interval-ms: 1000
+  publish:
+    timeout-seconds: 3
+  cleanup:
+    cron: "0 0 4 * * *"

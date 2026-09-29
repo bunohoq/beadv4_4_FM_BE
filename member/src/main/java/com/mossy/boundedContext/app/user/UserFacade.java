@@ -14,7 +14,8 @@ import com.mossy.boundedContext.in.dto.OAuth2UserDto;
 import com.mossy.boundedContext.out.external.dto.response.MemberAuthInfoResponse;
 import com.mossy.boundedContext.out.external.dto.response.SocialLonginResponse;
 import com.mossy.boundedContext.out.external.dto.response.MemberVerifyExternResponse;
-import com.mossy.kafka.publisher.KafkaEventPublisher;
+import com.mossy.kafka.KafkaTopics;
+import com.mossy.kafka.outbox.service.OutboxPublisher;
 import com.mossy.shared.member.event.UserJoinedEvent;
 import com.mossy.boundedContext.app.mapper.UserMapper;
 import com.mossy.shared.member.payload.UserPayload;
@@ -41,14 +42,20 @@ public class UserFacade {
     private final SetPasswordUseCase setPasswordUseCase;
     private final VerfyMemberUseCase verfyMemberUseCase;
     private final UserMapper mapper;
-    private final KafkaEventPublisher kafkaEventPublisher;
+    private final OutboxPublisher outboxPublisher;
 
     //회원가입
     @Transactional
     public Long signup(SignupRequest req, MultipartFile profileImage) {
         User savedUser = signupUseCase.execute(req, profileImage);
         UserPayload userPayload = mapper.toPayload(savedUser);
-        kafkaEventPublisher.publish(new UserJoinedEvent(userPayload));
+        outboxPublisher.saveEvent(
+            KafkaTopics.USER_JOINED,
+            "User",
+            savedUser.getId(),
+            UserJoinedEvent.class.getSimpleName(),
+            new UserJoinedEvent(userPayload)
+        );
         return savedUser.getId();
     }
 
